@@ -1,0 +1,28 @@
+{
+  "name": "cordova-plugin-screen-recorder",
+  "version": "1.0.0",
+  "description": "Cordova Screen Recorder Plugin",
+  "cordova": {
+    "id": "cordova-plugin-screen-recorder",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ptsimpso/cordova-plugin-screen-recorder.git"
+  },
+  "keywords": [
+    "cordova",
+    "screen",
+    "record",
+    "ecosystem:cordova",
+    "cordova-ios"
+  ],
+  "author": "Peter Simpson",
+  "license": "Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/ptsimpso/cordova-plugin-screen-recorder/issues"
+  },
+  "homepage": "https://github.com/ptsimpso/cordova-plugin-screen-recorder#readme"
+}
