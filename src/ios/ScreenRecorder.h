@@ -16,13 +16,12 @@
  specific language governing permissions and limitations
  under the License.
  */
-#import <Foundation/Foundation.h>
-#import <UIKit/UIKit.h>
+
 #import <Cordova/CDVPlugin.h>
 
-@interface ScreenRecorder : CDVPlugin
-{}
+@interface ScreenRecorder : CDVPlugin {}
 
 - (void)startRecording:(CDVInvokedUrlCommand *)command;
+- (void)stopRecording:(CDVInvokedUrlCommand *)command;
 
 @end

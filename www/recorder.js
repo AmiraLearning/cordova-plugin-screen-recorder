@@ -24,18 +24,31 @@ const exec = require("cordova/exec");
 const PLUGIN_NAME = "ScreenRecorder";
 
 const ScreenRecorder = {
-  startRecording: function (callback) {
-    var win =
-      callback &&
+  startRecording: function (successCallback, failureCallback) {
+    let success =
+      successCallback &&
       function (args) {
-        callback(args);
+        successCallback(args);
       };
-    var fail =
-      callback &&
+    let fail =
+      failureCallback &&
       function () {
-        callback();
+        failureCallback();
       };
-    exec(win, fail, PLUGIN_NAME, "startRecording", []);
+    exec(success, fail, PLUGIN_NAME, "startRecording", []);
+  },
+  stopRecording: function (successCallback, failureCallback) {
+    let success =
+      successCallback &&
+      function (args) {
+        successCallback(args);
+      };
+    let fail =
+      failureCallback &&
+      function () {
+        failureCallback();
+      };
+    exec(success, fail, PLUGIN_NAME, "stopRecording", []);
   },
 };
 

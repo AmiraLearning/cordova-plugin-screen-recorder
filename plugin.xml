@@ -44,6 +44,8 @@
 
         <header-file src="src/ios/ScreenRecorder.h" />
         <source-file src="src/ios/ScreenRecorder.m" />
+
+        <framework src="ReplayKit.framework" />
     </platform>
 
 </plugin>
