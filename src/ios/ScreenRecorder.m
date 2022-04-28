@@ -32,60 +32,87 @@
 @implementation ScreenRecorder
 
 - (void)startRecording:(CDVInvokedUrlCommand *)command {
-    self.assetId = [NSString stringWithFormat:@"%u", arc4random() % 1000];
+    self.assetId = [[NSUUID UUID] UUIDString];
     
-    NSError *error = nil;
+    // TODO: Use temp directory instead of documents dir
     // NSTemporaryDirectory()
     NSString *videoOutPath = [[[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0] stringByAppendingPathComponent:self.assetId] stringByAppendingPathExtension:@"mp4"];
-    self.assetWriter = [AVAssetWriter assetWriterWithURL:[NSURL fileURLWithPath:videoOutPath] fileType:AVFileTypeMPEG4 error:&error];
     
-    NSDictionary *compressionProperties = @{AVVideoProfileLevelKey         : AVVideoProfileLevelH264HighAutoLevel,
-                                            AVVideoH264EntropyModeKey      : AVVideoH264EntropyModeCABAC,
-                                            AVVideoAverageBitRateKey       : @(1920 * 1080 * 11.4),
-                                            AVVideoMaxKeyFrameIntervalKey  : @60,
-                                            AVVideoAllowFrameReorderingKey : @NO};
+    NSURL *outputUrl = [NSURL fileURLWithPath:videoOutPath];
+    NSLog(@"ScreenRecorder: video output url: %@", outputUrl);
     
-    NSDictionary *videoSettings = @{AVVideoCompressionPropertiesKey : compressionProperties,
+    NSError *deleteError = nil;
+    [[NSFileManager defaultManager] removeItemAtURL:outputUrl error:&deleteError];
+    if (deleteError) {
+        NSLog(@"ScreenRecorder: error deleting old file at path: %@", deleteError);
+    }
+    
+    self.screenRecorder = [RPScreenRecorder sharedRecorder];
+    [self.screenRecorder discardRecordingWithHandler:^{}];
+    
+    NSError *error = nil;
+    self.assetWriter = [[AVAssetWriter alloc] initWithURL:outputUrl fileType:AVFileTypeMPEG4 error:&error];
+    
+    // TODO: Try to improve video quality by  using original settings
+//    NSDictionary *compressionProperties = @{AVVideoProfileLevelKey         : AVVideoProfileLevelH264HighAutoLevel,
+//                                            AVVideoH264EntropyModeKey      : AVVideoH264EntropyModeCABAC,
+//                                            AVVideoAverageBitRateKey       : @(1920 * 1080 * 11.4),
+//                                            AVVideoMaxKeyFrameIntervalKey  : @60,
+//                                            AVVideoAllowFrameReorderingKey : @NO};
+//    AVVideoCompressionPropertiesKey : compressionProperties,
+    
+    NSDictionary *videoSettings = @{
                                     AVVideoCodecKey                 : AVVideoCodecTypeH264,
-                                    AVVideoWidthKey                 : @1080,
-                                    AVVideoHeightKey                : @1920};
+                                    AVVideoWidthKey                 : [NSNumber numberWithFloat:UIScreen.mainScreen.bounds.size.width],
+                                    AVVideoHeightKey                : [NSNumber numberWithFloat:UIScreen.mainScreen.bounds.size.height]};
     
     self.assetWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
     
     [self.assetWriter addInput:self.assetWriterInput];
-    [self.assetWriterInput setMediaTimeScale:60];
-    [self.assetWriter setMovieTimeScale:60];
+    // TODO: Try reimplementing this to improve video quality
+//    [self.assetWriterInput setMediaTimeScale:60];
+//    [self.assetWriter setMovieTimeScale:60];
     [self.assetWriterInput setExpectsMediaDataInRealTime:YES];
     
-    self.screenRecorder = [RPScreenRecorder sharedRecorder];
+    // TODO: Add audio with audio input?
     
     [self.screenRecorder startCaptureWithHandler:^(CMSampleBufferRef  _Nonnull sampleBuffer, RPSampleBufferType bufferType, NSError * _Nullable error) {
-        NSLog(@"ScreenRecorder: Buffer status: %@", CMSampleBufferDataIsReady(sampleBuffer));
+        if (error) {
+            NSLog(@"ScreenRecorder: Error starting capture: %@", error.debugDescription);
+            return;
+        }
         if (CMSampleBufferDataIsReady(sampleBuffer)) {
-            if (self.assetWriter.status == AVAssetWriterStatusUnknown) {
-                [self.assetWriter startWriting];
-                [self.assetWriter startSessionAtSourceTime:CMSampleBufferGetPresentationTimeStamp(sampleBuffer)];
-            }
             
-            if (self.assetWriter.status == AVAssetWriterStatusFailed) {
-                NSLog(@"ScreenRecorder: assetWriter error occured.");
-                return;
-            }
-            
-            if (bufferType == RPSampleBufferTypeVideo) {
-                NSLog(@"ScreenRecorder: Found video buffertype.");
-                if (self.assetWriterInput.isReadyForMoreMediaData) {
-                    NSLog(@"ScreenRecorder: assetWriterInput.isReadyForMoreMediaData.");
-                    [self.assetWriterInput appendSampleBuffer:sampleBuffer];
-                }
+            switch (bufferType) {
+                case RPSampleBufferTypeVideo:
+                    NSLog(@"ScreenRecorder: Found video buffertype.");
+                    if (self.assetWriter.status == AVAssetWriterStatusUnknown) {
+                        NSLog(@"ScreenRecorder: Starting asset writer writing");
+                        [self.assetWriter startWriting];
+                        [self.assetWriter startSessionAtSourceTime:CMSampleBufferGetPresentationTimeStamp(sampleBuffer)];
+                    }
+                    
+                    if (self.assetWriter.status == AVAssetWriterStatusWriting && self.assetWriterInput.isReadyForMoreMediaData) {
+                        NSLog(@"ScreenRecorder: assetWriterInput.isReadyForMoreMediaData.");
+                        [self.assetWriterInput appendSampleBuffer:sampleBuffer];
+                    }
+                    
+                    if (self.assetWriter.status == AVAssetWriterStatusFailed) {
+                        NSLog(@"ScreenRecorder: assetWriter error occured. Status: %ld. Error: %@", (long)self.assetWriter.status, self.assetWriter.error.debugDescription);
+                    }
+                    break;
+                    
+                default:
+                    NSLog(@"ScreenRecorder: Not a supported buffer type... Ignoring.");
+                    break;
             }
         }
     } completionHandler:^(NSError * _Nullable error) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:self.assetId];
         if (!error) {
-            NSLog(@"Recording started successfully.");
+            NSLog(@"ScreenRecorder: Recording started successfully.");
         } else {
-            NSLog(@"Error starting recording.");
+            NSLog(@"ScreenRecorder: Error starting recording.");
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error starting recording."];
         }
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
@@ -96,9 +123,13 @@
     [self.screenRecorder stopCaptureWithHandler:^(NSError * _Nullable error) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:self.assetId];
         if (!error) {
-            NSLog(@"Recording stopped successfully. Cleaning up...");
+            NSLog(@"ScreenRecorder: Recording stopped successfully. Cleaning up...");
             if (self.assetWriter.status != AVAssetWriterStatusCompleted && self.assetWriter.status != AVAssetWriterStatusUnknown) {
-                [self.assetWriterInput markAsFinished];
+                #if TARGET_OS_SIMULATOR
+                    // Do nothing
+                #else
+                    [self.assetWriterInput markAsFinished];
+                #endif
             }
             
             if ([self.assetWriter respondsToSelector:@selector(finishWritingWithCompletionHandler:)]) {
@@ -108,7 +139,7 @@
                     self.screenRecorder = nil;
                 }];
             } else {
-                [self.assetWriter finishWriting];
+                [self.assetWriter finishWritingWithCompletionHandler:^() {}];
             }
             
             // Save the video photo library
@@ -128,7 +159,7 @@
 //                        }
             
         } else {
-            NSLog(@"Error stopping recording.");
+            NSLog(@"ScreenRecorder: Error stopping recording.");
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
         }
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
