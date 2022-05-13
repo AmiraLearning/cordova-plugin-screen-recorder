@@ -34,11 +34,11 @@
 
 - (void)createVideoWriterInput {
     CGRect screenBounds = [[UIScreen mainScreen] bounds];
-    CGFloat screenScale = [[UIScreen mainScreen] scale];
+    // CGFloat screenScale = [[UIScreen mainScreen] scale];
     NSDictionary *videoSettings = @{
                                     AVVideoCodecKey                 : AVVideoCodecTypeH264,
-                                    AVVideoWidthKey                 : [NSNumber numberWithFloat:screenBounds.size.width * screenScale],
-                                    AVVideoHeightKey                : [NSNumber numberWithFloat:screenBounds.size.height * screenScale]};
+                                    AVVideoWidthKey                 : [NSNumber numberWithFloat:screenBounds.size.width],
+                                    AVVideoHeightKey                : [NSNumber numberWithFloat:screenBounds.size.height]};
     
     self.videoAssetWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
     [self.videoAssetWriterInput setExpectsMediaDataInRealTime:YES];
@@ -47,7 +47,7 @@
 - (void)createAudioWriterInput {
     NSDictionary *audioSettings = @{
         AVFormatIDKey: [NSNumber numberWithInt:kAudioFormatMPEG4AAC],
-        AVSampleRateKey: @32000,
+        AVSampleRateKey: @24000,
         AVNumberOfChannelsKey: @1,
         AVEncoderAudioQualityKey: [NSNumber numberWithLong:AVAudioQualityHigh]
     };
