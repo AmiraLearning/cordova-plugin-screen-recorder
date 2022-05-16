@@ -57,6 +57,13 @@
 }
 
 - (void)startRecording:(CDVInvokedUrlCommand *)command {
+    NSString *model = [[UIDevice currentDevice] model];
+    if ([model hasSuffix:@"Simulator"]) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        return;
+    }
+
     self.assetId = [[NSUUID UUID] UUIDString];
     NSString *videoOutPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:self.assetId] stringByAppendingPathExtension:@"mp4"];
     
@@ -123,16 +130,19 @@
 }
 
 - (void)stopRecording:(CDVInvokedUrlCommand *)command {
+    NSString *model = [[UIDevice currentDevice] model];
+    if ([model hasSuffix:@"Simulator"]) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        return;
+    }
+
     [self.screenRecorder stopCaptureWithHandler:^(NSError * _Nullable error) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:self.assetId];
         if (!error) {
             NSLog(@"ScreenRecorder: Recording stopped successfully.");
             if (self.assetWriter.status != AVAssetWriterStatusCompleted && self.assetWriter.status != AVAssetWriterStatusUnknown) {
-                #if TARGET_OS_SIMULATOR
-                    // Do nothing
-                #else
-                    [self.videoAssetWriterInput markAsFinished];
-                #endif
+                [self.videoAssetWriterInput markAsFinished];
             }
             
             if ([self.assetWriter respondsToSelector:@selector(finishWritingWithCompletionHandler:)]) {
