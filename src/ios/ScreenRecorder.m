@@ -57,12 +57,11 @@
 }
 
 - (void)startRecording:(CDVInvokedUrlCommand *)command {
-    NSString *model = [[UIDevice currentDevice] model];
-    if ([model hasSuffix:@"Simulator"]) {
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        return;
-    }
+#if TARGET_OS_SIMULATOR
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    return;
+#endif
 
     self.assetId = [[NSUUID UUID] UUIDString];
     NSString *videoOutPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:self.assetId] stringByAppendingPathExtension:@"mp4"];
@@ -130,12 +129,11 @@
 }
 
 - (void)stopRecording:(CDVInvokedUrlCommand *)command {
-    NSString *model = [[UIDevice currentDevice] model];
-    if ([model hasSuffix:@"Simulator"]) {
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        return;
-    }
+#if TARGET_OS_SIMULATOR
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    return;
+#endif
 
     [self.screenRecorder stopCaptureWithHandler:^(NSError * _Nullable error) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:self.assetId];
