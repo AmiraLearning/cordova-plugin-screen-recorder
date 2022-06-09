@@ -143,14 +143,12 @@
                 [self.videoAssetWriterInput markAsFinished];
             }
             
-            if ([self.assetWriter respondsToSelector:@selector(finishWritingWithCompletionHandler:)]) {
+            if ([self.assetWriter respondsToSelector:@selector(finishWritingWithCompletionHandler:)] && self.assetWriter.status != AVAssetWriterStatusUnknown) {
                 [self.assetWriter finishWritingWithCompletionHandler:^{
                     self.videoAssetWriterInput = nil;
                     self.assetWriter = nil;
                     self.screenRecorder = nil;
                 }];
-            } else {
-                [self.assetWriter finishWritingWithCompletionHandler:^() {}];
             }
             
             // Save the video photo library
