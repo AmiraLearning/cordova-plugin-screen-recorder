@@ -149,6 +149,8 @@
                     self.assetWriter = nil;
                     self.screenRecorder = nil;
                 }];
+            } else {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error stopping recording."];
             }
             
             // Save the video photo library
